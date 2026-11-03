@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%233e6a50%27/%3E%3Ctext x=%2716%27 y=%2724%27 font-size=%2722%27 font-family=%27Georgia%27 font-style=%27italic%27 text-anchor=%27middle%27 fill=%27white%27%3Em%3C/text%3E%3C/svg%3E">
+  <meta name="theme-color" content="#f7f8f5">
+  <meta name="description" content="moyGid — карта достопримечательностей Чеченской Республики и планировщик маршрутов.">
+  <title>moyGid — открой Чечню</title>
+
+  <link rel="preload" as="image" href="assets/images/heart-1.jpg" fetchpriority="high">
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="preconnect" href="https://tile.openstreetmap.org">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Экран загрузки (скрывается скриптом внизу страницы) -->
+  <div class="site-loader" id="siteLoader" role="status" aria-live="polite" aria-label="Загрузка moyGid">
+    <div class="loader-content">
+      <span class="loader-brand">moy<span>Gid</span></span>
+      <span class="loader-tagline">Открывай Чечню</span>
+      <span class="loader-track" aria-hidden="true"><span></span></span>
+      <span class="loader-message">Открываем красивые места Чечни</span>
+    </div>
+  </div>
+
+  <!-- Шапка сайта -->
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="moyGid — главная">
+      <span class="brand-mark">m</span>
+      <span>moy<span class="brand-light">Gid</span></span>
+    </a>
+
+    <nav class="main-nav" aria-label="Главная навигация">
+      <a class="nav-link active" href="#map-section">Карта</a>
+      <a class="nav-link" href="#places-section">Места</a>
+      <a class="nav-link" href="#route-section">Маршрут</a>
+      <a class="nav-link" href="#about-section">Об авторе</a>
+    </nav>
+
+    <button class="mobile-menu" id="mobileMenu" aria-label="Показать навигацию" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+  </header>
+
+  <main>
+
+    <!-- Главный экран -->
+    <section class="intro">
+      <div class="intro-copy">
+        <p class="eyebrow"><span class="eyebrow-line"></span> ПУТЕШЕСТВИЯ ПО ЧЕЧНЕ</p>
+        <h1>Чечня ближе,<br><em>чем кажется.</em></h1>
+        <p class="intro-text">Находите места, узнавайте их истории и собирайте собственный маршрут по республике.</p>
+
+        <div class="intro-actions">
+          <a class="button button-dark" href="#map-section">Исследовать карту <span aria-hidden="true">↗</span></a>
+          <a class="text-link" href="#places-section">Смотреть места <span aria-hidden="true">→</span></a>
+        </div>
+      </div>
+
+      <div class="intro-visual">
+        <img id="heroPhoto" src="assets/images/heart-1.jpg" alt="Мечеть «Сердце Чечни»" fetchpriority="high">
+        <div class="visual-shade"></div>
+
+        <div class="visual-caption">
+          <span id="heroCount">01 / 08</span>
+
+          <div>
+            <strong id="heroName">Мечеть «Сердце Чечни»</strong>
+            <small id="heroArea">Грозный</small>
+          </div>
+
+          <div class="hero-controls">
+            <button id="heroPrev" aria-label="Предыдущее место">←</button>
+            <button id="heroNext" aria-label="Следующее место">→</button>
+          </div>
+
+          <button id="heroOpen" class="hero-open">Подробнее ↗</button>
+        </div>
+
+        <div class="visual-label">ЧЕЧЕНСКАЯ РЕСПУБЛИКА</div>
+      </div>
+    </section>
+
+    <!-- Краткая статистика (числа подставляет app.js) -->
+    <section class="quick-stats" aria-label="О сайте">
+      <div><strong id="placeCount">08</strong><span>мест на карте</span></div>
+      <div><strong id="areaCount">06</strong><span>районов и городов</span></div>
+      <div><strong id="categoryCount">04</strong><span>типа мест</span></div>
+      <div><strong>01</strong><span>республика для открытия</span></div>
+    </section>
+
+    <!-- Интерактивная карта -->
+    <section class="map-section section-wrap" id="map-section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">ВАШ ОРИЕНТИР</p>
+          <h2>Исследуйте карту</h2>
+        </div>
+        <p class="section-note">Нажмите на метку, чтобы узнать о месте подробнее.</p>
+      </div>
+
+      <div class="map-layout">
+
+        <!-- Боковая панель: поиск, фильтры, список мест -->
+        <aside class="map-sidebar">
+          <label class="search-box">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/></svg>
+            <input id="placeSearch" type="search" placeholder="Найти достопримечательность" autocomplete="off">
+          </label>
+
+          <div class="filter-row" id="categoryFilters" aria-label="Фильтр по типу места">
+            <button class="filter-chip selected" data-category="Все">Все места</button>
+            <button class="filter-chip" data-category="Архитектура">Архитектура</button>
+            <button class="filter-chip" data-category="Природа">Природа</button>
+            <button class="filter-chip" data-category="История">История</button>
+            <button class="filter-chip" data-category="Культура">Культура</button>
+          </div>
+
+          <label class="area-filter-label" for="areaFilter">Район</label>
+          <select id="areaFilter" class="area-filter">
+            <option>Все районы</option>
+            <option>Грозный</option>
+            <option>Аргун</option>
+            <option>Веденский район</option>
+            <option>Итум-Калинский район</option>
+            <option>Шатойский район</option>
+            <option>Шали</option>
+          </select>
+
+          <div class="sidebar-title">
+            <span>ДОСТОПРИМЕЧАТЕЛЬНОСТИ</span>
+            <span id="resultsCount">08</span>
+          </div>
+
+          <!-- Список заполняется скриптом -->
+          <div class="place-list" id="mapPlaceList"></div>
+
+          <div class="map-legend"><span class="legend-dot"></span> Достопримечательность <span class="legend-line"></span> Ваш маршрут</div>
+        </aside>
+
+        <!-- Карта -->
+        <div class="map-frame">
+          <div id="map" role="application" aria-label="Интерактивная карта достопримечательностей Чеченской Республики"></div>
+
+          <div class="map-top-label"><span class="live-dot"></span> ИНТЕРАКТИВНАЯ КАРТА</div>
+
+          <button class="map-locate" id="resetMap" title="Показать всю республику" aria-label="Показать все места">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 21 3l-8 18-2.5-7.5L3 11Z"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Каталог мест -->
+    <section class="places-section section-wrap" id="places-section">
+      <div class="section-heading places-heading">
+        <div>
+          <p class="eyebrow">ВЫБРАННЫЕ МЕСТА</p>
+          <h2>Есть что посмотреть</h2>
+        </div>
+        <a class="text-link" href="#map-section">Все места на карте <span aria-hidden="true">↗</span></a>
+      </div>
+
+      <div class="places-toolbar">
+        <p>Фильтруйте места и открывайте фотогалереи.</p>
+
+        <div class="toolbar-selection">
+          <span><b id="selectedCount">0</b> выбрано для маршрута</span>
+          <button class="link-button clear-action" type="button" data-clear-route>Очистить список</button>
+        </div>
+      </div>
+
+      <!-- Карточки заполняются скриптом -->
+      <div class="places-grid" id="placesGrid"></div>
+    </section>
+
+    <!-- Построение маршрута -->
+    <section class="route-section" id="route-section">
+      <div class="route-inner">
+
+        <div class="route-copy">
+          <p class="eyebrow eyebrow-light">ВАШЕ ПУТЕШЕСТВИЕ</p>
+          <h2>Соберите маршрут<br><em>под себя.</em></h2>
+          <p>Отметьте интересные места. moyGid предложит порядок посещения, чтобы путь между выбранными точками был короче.</p>
+
+          <div class="route-controls">
+            <label for="routeStart">Начать из</label>
+
+            <!-- Значение — координаты "широта,долгота" -->
+            <select id="routeStart" aria-label="Начальная точка маршрута">
+              <option value="my-location" selected>Моё местоположение</option>
+              <option value="43.3178,45.6949">Грозный</option>
+              <option value="43.2038,46.0872">Аргун</option>
+              <option value="43.156876,45.904312">Шали</option>
+              <option value="42.7731,46.1527">Озеро Кезеной-Ам</option>
+            </select>
+
+            <button class="button button-accent" id="buildRoute">Построить маршрут <span aria-hidden="true">→</span></button>
+            <button class="button button-outline route-random" id="randomRoute" type="button">Выбрать случайный маршрут</button>
+          </div>
+
+          <p class="route-disclaimer">Порядок точек рассчитывается по прямому расстоянию. Дорожный маршрут и время в пути уточняйте в навигаторе.</p>
+        </div>
+
+        <!-- Предпросмотр маршрута -->
+        <div class="route-preview-wrap">
+          <div class="route-preview-clip">
+            <div class="route-preview">
+
+              <div class="route-preview-top">
+                <span>ВАШ ПЛАН</span>
+                <span class="preview-status">
+                  <span id="routeStatus">ПОКА ПУСТО</span>
+                  <button class="link-button" type="button" data-clear-route>Очистить</button>
+                </span>
+              </div>
+
+              <!-- Список остановок заполняется скриптом -->
+              <div id="routeOutput" class="route-output"></div>
+
+              <div id="routeMap" class="route-map" aria-label="Карта построенного маршрута"></div>
+              <p class="route-map-note">Схема показывает порядок остановок. Точную дорогу и время поездки Google Карты рассчитают после перехода.</p>
+
+              <div class="route-preview-bottom">
+                <span>moyGid / маршрут</span>
+                <span id="routeDistance">— км</span>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Об авторе -->
+    <section class="about-section section-wrap" id="about-section">
+      <div class="about-copy">
+        <p class="eyebrow">ОБ АВТОРЕ</p>
+        <h2>Здесь моя <em>родина.</em></h2>
+        <p>Меня зовут Мурад Витаев. Этот сайт я сделал для конкурса «Здесь моя родина», чтобы собрать в одном месте места Чечни, которые стоит увидеть, и дать возможность составить по ним свой маршрут.</p>
+        <p>Каждое место можно открыть, посмотреть фотографии, найти на карте и добавить в поездку.</p>
+      </div>
+
+      <ol class="about-steps">
+        <li>
+          <span>01</span>
+          <div>
+            <strong>Выберите места</strong>
+            <p>Найдите их на карте или в каталоге и отметьте кнопкой «+».</p>
+          </div>
+        </li>
+        <li>
+          <span>02</span>
+          <div>
+            <strong>Постройте маршрут</strong>
+            <p>Сайт расставит остановки в порядке посещения от выбранной точки старта.</p>
+          </div>
+        </li>
+        <li>
+          <span>03</span>
+          <div>
+            <strong>Откройте в Google Картах</strong>
+            <p>Дорогу и время в пути рассчитает навигатор.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+  </main>
+
+  <!-- Подвал -->
+  <footer class="footer">
+    <div class="footer-main">
+      <a class="brand" href="#">
+        <span class="brand-mark">m</span>
+        <span>moy<span class="brand-light">Gid</span></span>
+      </a>
+      <p>Ваш путеводитель по Чеченской Республике.</p>
+    </div>
+
+    <nav class="footer-nav" aria-label="Разделы сайта">
+      <a href="#map-section">Карта</a>
+      <a href="#places-section">Места</a>
+      <a href="#route-section">Маршрут</a>
+      <a href="#about-section">Об авторе</a>
+    </nav>
+
+    <span class="footer-credit">Карты © OpenStreetMap</span>
+    <p class="footer-author">Создал сайт Витаев Мурад Ахметович для конкурса «Здесь моя родина»</p>
+  </footer>
+
+  <!-- Окно с описанием места и галереей (содержимое подставляет app.js) -->
+  <dialog id="placeDialog" class="place-dialog">
+    <button class="dialog-close" id="closeDialog" aria-label="Закрыть">×</button>
+
+    <div class="dialog-gallery">
+      <img id="galleryImage" src="assets/images/photo-placeholder.svg" alt="">
+      <button class="gallery-arrow gallery-prev" id="galleryPrev" aria-label="Предыдущее фото">‹</button>
+      <button class="gallery-arrow gallery-next" id="galleryNext" aria-label="Следующее фото">›</button>
+      <span class="gallery-counter" id="galleryCounter">1 / 2</span>
+      <span class="gallery-caption" id="galleryCaption"></span>
+    </div>
+
+    <div class="dialog-body">
+      <p class="dialog-kicker" id="dialogKicker"></p>
+      <h2 class="dialog-title" id="dialogTitle"></h2>
+      <p class="dialog-description" id="dialogDescription"></p>
+      <p class="dialog-credit" id="dialogCredit"></p>
+      <div class="gallery-dots" id="galleryDots"></div>
+
+      <div class="dialog-actions">
+        <button class="button button-dark" id="dialogSelect">Добавить в маршрут →</button>
+        <button class="text-link" id="dialogFocus">Показать на карте ↗</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="app.js"></script>
+
+  <!-- Скрываем экран загрузки: после полной загрузки страницы, но не позже чем через 3,5 с -->
+  <script>
+    (() => {
+      const loader = document.getElementById('siteLoader');
+      let dismissed = false;
+
+      const dismiss = () => {
+        if (dismissed) return;
+        dismissed = true;
+
+        loader.classList.add('is-hidden');
+        window.setTimeout(() => loader.remove(), 500);
+      };
+
+      if (document.readyState === 'complete') {
+        window.setTimeout(dismiss, 250);
+      } else {
+        window.addEventListener('load', () => window.setTimeout(dismiss, 250), { once: true });
+      }
+
+      window.setTimeout(dismiss, 3500);
+    })();
+  </script>
+</body>
+</html>
